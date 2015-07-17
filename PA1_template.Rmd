@@ -1,25 +1,98 @@
 ---
-title: "Reproducible Research: Peer Assessment 1"
-output: 
-  html_document:
-    keep_md: true
+title: "Peer Assessment 1"
+author: "Celso Castro"
+date: "Thursday, July 16, 2015"
+output: html_document
 ---
 
+First we read the data
 
-## Loading and preprocessing the data
+```{r readdata}
+datos=read.csv("C:/Users/Celso/Documents/activity.csv",sep=",",header=T)
+```
+Next, we calculate the total number of steps taken per day
+
+```{r countdailysteps}
+totalpasos<- tapply(datos$steps, datos$date, sum, na.rm = TRUE)
+```
+
+This histogram shows the frequency of daily steps taken.
+
+```{r totalNA}
+complete<-complete.cases(datos)
+datos2=datos[complete,]
+tNA<-nrow(datos)-nrow(datos2)
+```
+
+The total number of (missing values) NA's in the database is `r tNA`
+
+```{r histogramdailysteps}
+hist(totalpasos,main="Número de pasos por día", xlab="Pasos por día",ylab="Frecuencia",breaks=30,border="blue")
+```
+
+```{r meanmedian}
+prom<-round(mean(totalpasos),0)
+
+mediana<-median(totalpasos)
+```
+
+The mean of the total steps taken is `r prom` and the median is `r mediana`
+
+```{r stepsbyinterval}
+pasosint<- tapply(datos$steps, datos$interval, mean, na.rm = TRUE)
+plot(levels(as.factor(datos$interval)),pasosint,main="Promedio de pasos por intervalo", xlab="Intervalo de 5 minutos",ylab="Promedio de pasos hechos",type="l",col="blue")
+```
 
 
+```{r maximumstepsbyinterval}
+maximo=max(pasosint)
+inter<-names(pasosint)[which(pasosint == max(pasosint))]
+```
 
-## What is mean total number of steps taken per day?
+The interval which contains the maximum number of steps is `r inter`
 
+```{r FillNAswithMean}
 
+        datosnoNA<-datos
+        for (i in 1:nrow(datos)) {
 
-## What is the average daily activity pattern?
+        if (is.na(datos$steps[i])==TRUE) {
 
+            intervalo <- as.character(datos$interval[i])
+            mediaint <-round(pasosint[intervalo],0)
 
+            datosnoNA$steps[i] <- mediaint
+                                         }
+                                  }         
+head(datosnoNA)
+```
 
-## Imputing missing values
+The data set datosnoNA has no missing values
 
+```{r histogramdailystepsfilleddata}
+totalpasos2<- tapply(datosnoNA$steps, datosnoNA$date, sum,na.rm=TRUE)
+hist(totalpasos2,main="Número de pasos por día", xlab="Pasos por día",ylab="Frecuencia",breaks=30,border="blue",ylim=c(0,20))
+prom2<-round(mean(totalpasos2),0)
+mediana2<-median(totalpasos2)
+```
 
+The mean of the total steps taken without missing values is `r sprintf("%0.0f",prom2)` and the median is `r  sprintf("%0.0f",mediana2)`
 
-## Are there differences in activity patterns between weekdays and weekends?
+*We can conclude that when the missing observations are changed for the meand of steps by interval there is a significant increase in the dayly steps taken which have a direct impact on the mean and median of these variable. These values are bigger than the original ones.
+
+```{r factorweekdayweekend}
+datosnoNA$date<-as.Date(datosnoNA$date)
+dias<-as.factor(weekdays(datosnoNA$date))
+datosnoNA$dias<-dias
+#we have to check that is a weekday or a weekend and rename the factors in the order they are
+levels(datosnoNA$dias) #to check the order
+levels(datosnoNA$dias)<-c("weekend","weekday","weekday","weekday","weekday","weekend","weekday")
+```
+
+Now we generate the plane plot
+```{r plotweekdayweekend}
+library(plyr)
+library(ggplot2)
+qplot(datosnoNA$interval,datosnoNA$steps, data=arrange(datosnoNA, date), facets= dias~., geom="line", xlab="Intervalo", ylab="Número de pasos",main="Promedio de pasos por días de semana y fin de semana")
+```
+
